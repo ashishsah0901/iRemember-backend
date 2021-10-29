@@ -16,14 +16,15 @@ router.post('/createuser', [
     body('email', 'Enter a valid email').isEmail(),
     body('password', 'Enter a valid password').isLength({ min: 5 })
 ], async (req, res) => {
+    let success = false
     try {
         const error = validationResult(req);
         if (!error.isEmpty()) {
-            res.status(400).json({ errors: error.array() })
+            res.status(400).json({ success, errors: error.array() })
         }
         let user = await User.findOne({ email: req.body.email })
         if (user) {
-            return res.status(400).json({ error: 'A user already exists.' })
+            return res.status(400).json({ success, error: 'A user already exists.' })
         }
         const salt = await bcrypt.genSalt(10);
         const sequirePassword = await bcrypt.hash(req.body.password, salt);
@@ -37,10 +38,11 @@ router.post('/createuser', [
                 id: user.id
             }
         }
+        success = true
         const token = jwt.sign(data, jwtSignature)
-        res.status(200).json({ token });
+        res.status(200).json({ success, token });
     } catch (error) {
-        res.status(500).json({ error: "Some Error Occured" })
+        res.status(500).json({ success, error: "Some Error Occured" })
     }
 })
 
@@ -49,40 +51,44 @@ router.post('/login', [
     body('email', 'Enter a valid email').isEmail(),
     body('password', 'Enter a valid password').exists()
 ], async (req, res) => {
+    let success = false
     try {
         const error = validationResult(req);
         if (!error.isEmpty()) {
-            res.status(400).json({ errors: 'Wrong credentials.' })
+            res.status(400).json({ success, errors: 'Wrong credentials.' })
         }
         const { email, password } = req.body;
         let user = await User.findOne({ email: email })
         if (!user) {
-            return res.status(400).json({ error: 'Wrong credentials.' })
+            return res.status(400).json({ success, error: 'Wrong credentials.' })
         }
         const passwordCompare = await bcrypt.compare(password, user.password);
         if (!passwordCompare) {
-            return res.status(400).json({ error: 'Wrong credentials.' })
+            return res.status(400).json({ success, error: 'Wrong credentials.' })
         }
         const data = {
             user: {
                 id: user.id
             }
         }
+        success = true
         const token = jwt.sign(data, jwtSignature)
-        res.status(200).json({ token });
+        res.status(200).json({ success, token });
     } catch (error) {
-        res.status(500).json({ error: "Some Error Occured" })
+        res.status(500).json({ success, error: "Some Error Occured" })
     }
 })
 
 // ROUTE 3: GET USER DATA (AUTH)
 router.get("/getuser", fetchuser, async (req, res) => {
+    let success = false
     try {
         const userId = req.user.id;
         const user = await User.findById(userId).select("-password")
-        res.send(user);
+        success = true
+        res.status(200).json({ success, user });
     } catch (error) {
-        res.status(500).json({ error: "Some Error Occured" })
+        res.status(500).json({ success, error: "Some Error Occured" })
     }
 })
 
